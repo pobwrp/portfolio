@@ -1,0 +1,45 @@
+bundle:
+  name: etl-ingest-common
+
+include:
+  - configs/env-vars.yml
+  - resources/jobs/*.yml
+
+artifacts:
+  - name: notebooks
+    path: src/python
+
+resources:
+  clusters:
+    single_node_dev:
+      spark_version: 15.4.x-scala2.12
+      node_type_id: ${var.node_type_id}
+      num_workers: 0
+      spark_conf:
+        spark.databricks.cluster.profile: singleNode
+        spark.master: local[*, 4]
+      custom_tags:
+        project: etl-ingest-common
+
+targets:
+  dev:
+    mode: development
+    workspace:
+      host: https://adb-placeholder-dev.azuredatabricks.net
+      root_path: /DEV/PORTFOLIO/${bundle.name}
+    run_as:
+      user_name: data.engineer@example.com
+  sit:
+    mode: production
+    workspace:
+      host: https://adb-placeholder-sit.azuredatabricks.net
+      root_path: /SIT/PORTFOLIO/${bundle.name}
+    run_as:
+      user_name: data.engineer@example.com
+  prd:
+    mode: production
+    workspace:
+      host: https://adb-placeholder-prd.azuredatabricks.net
+      root_path: /PRD/PORTFOLIO/${bundle.name}
+    run_as:
+      service_principal_name: svc-databricks@example.com

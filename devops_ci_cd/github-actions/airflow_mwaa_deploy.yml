@@ -1,0 +1,64 @@
+name: Deploy Airflow to MWAA
+
+on:
+  push:
+    branches:
+      - main
+      - release/*
+
+jobs:
+  sync-artifacts:
+    runs-on: ubuntu-latest
+    env:
+      S3_BUCKET: s3://portfolio-mwaa-artifacts
+      MWAA_ENV: portfolio-airflow
+      AWS_REGION: ap-southeast-1
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install AWS CLI
+        run: |
+          python -m pip install --upgrade pip
+          pip install awscli
+
+      - name: Package Airflow Assets
+        run: |
+          mkdir -p build
+          rsync -a dags/ build/dags/
+          rsync -a plugins/ build/plugins/ || true
+          rsync -a requirements/ build/requirements/ || true
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Sync to S3
+        run: |
+          aws s3 sync build "$S3_BUCKET/${{ github.ref_name }}" \
+            --delete
+
+      - name: Notify MWAA
+        run: |
+          aws mwaa publish-metrics \
+            --environment-name "$MWAA_ENV" \
+            --metric-data name=deployment_commit,value=1,unit=None
+
+      - name: Post Slack Notification
+        if: always()
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        run: |
+          payload='{ "text": "MWAA deploy for ${{ github.ref_name }} finished with status ${{ job.status }}" }'
+          curl -X POST -H 'Content-type: application/json' --data "$payload" "$SLACK_WEBHOOK"

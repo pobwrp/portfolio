@@ -1,0 +1,40 @@
+resources:
+  jobs:
+    export_delta_to_sharepoint:
+      name: ${var.job_prefix}EXPORT_DELTA_TO_SHAREPOINT
+      description: "Snapshot REST API responses into SharePoint for downstream analysts"
+
+      email_notifications:
+        on_failure:
+          - ${var.email_notifications}
+
+      tasks:
+        - task_key: export_sharepoint
+          notebook_task:
+            notebook_path: ../src/python/export_delta_to_sharepoint.py
+            base_parameters:
+              job_datetime: "{{ now() }}"
+            source: WORKSPACE
+          job_cluster_key: single_node_export
+
+      job_clusters:
+        - job_cluster_key: single_node_export
+          new_cluster:
+            spark_version: 15.4.x-scala2.12
+            node_type_id: ${var.node_type_id}
+            num_workers: 0
+            spark_conf:
+              spark.databricks.cluster.profile: singleNode
+              spark.master: local[*, 4]
+            custom_tags:
+              ResourceClass: SingleNode
+              project: etl-ingest-common
+            runtime_engine: STANDARD
+
+      tags:
+        project: etl-ingest-common
+
+      max_concurrent_runs: 1
+      parameters:
+        - name: env
+          default: "${bundle.target}"

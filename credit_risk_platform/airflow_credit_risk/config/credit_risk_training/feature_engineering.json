@@ -1,0 +1,18 @@
+{
+  "script": "feature_engineering",
+  "script_root": "spark-modeling",
+  "spark": {
+    "binary": "spark-submit",
+    "options": [
+      "--master yarn",
+      "--deploy-mode cluster",
+      "--conf spark.yarn.maxAppAttempts=1",
+      "--conf spark.executor.instances=4"
+    ]
+  },
+  "params": {
+    "input_path": "s3://credit-risk/raw/loans/{ds_nodash}",
+    "output_path": "s3://credit-risk/feature-store/loans/{ds_nodash}",
+    "run_tag": "{run_id}"
+  }
+}

@@ -1,0 +1,12 @@
+variables:
+  email_notifications:
+    description: Email recipients for job notifications
+    default: data.engineering@example.com
+
+  node_type_id:
+    description: Cluster node type for single-node jobs
+    default: Standard_E4s_v5
+
+  job_prefix:
+    description: Optional prefix to group related jobs
+    default: ""

@@ -1,0 +1,21 @@
+{
+  "script": "credit_risk_model_training",
+  "script_root": "spark-modeling",
+  "spark": {
+    "binary": "spark-submit",
+    "options": [
+      "--master yarn",
+      "--deploy-mode cluster",
+      "--conf spark.yarn.executor.memory=6g",
+      "--conf spark.executor.instances=6"
+    ]
+  },
+  "params": {
+    "training_window_months": "6",
+    "sampling_ratio": "1.5",
+    "model_registry_path": "s3://credit-risk/models/",
+    "metrics_path": "s3://credit-risk/metrics/",
+    "feature_store_path": "s3://credit-risk/feature-store/loans/{ds_nodash}",
+    "run_tag": "{run_id}"
+  }
+}

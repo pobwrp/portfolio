@@ -1,0 +1,48 @@
+resources:
+  jobs:
+    ingest_db_to_adls:
+      name: ${var.job_prefix}INGEST_DB_TO_ADLS
+      description: "Extract operational data via JDBC and land it in ADLS"
+
+      email_notifications:
+        on_failure:
+          - ${var.email_notifications}
+
+      tasks:
+        - task_key: ingest_db
+          notebook_task:
+            notebook_path: ../src/python/ingest_db_to_adls.py
+            base_parameters:
+              source_connection_name: warehouse.analytics
+              sql_file_path: ../sql/select-dataset.sql
+              target_connection_name: blob.curated
+              target_file_path: datasets/customer_snapshot
+              write_mode: overwrite
+            source: WORKSPACE
+          job_cluster_key: single_node_jdbc
+
+      job_clusters:
+        - job_cluster_key: single_node_jdbc
+          new_cluster:
+            spark_version: 15.4.x-scala2.12
+            node_type_id: ${var.node_type_id}
+            num_workers: 0
+            spark_conf:
+              spark.databricks.cluster.profile: singleNode
+              spark.master: local[*, 4]
+            custom_tags:
+              ResourceClass: SingleNode
+              project: etl-ingest-common
+            runtime_engine: STANDARD
+
+      tags:
+        project: etl-ingest-common
+
+      max_concurrent_runs: 1
+      parameters:
+        - name: env
+          default: "${bundle.target}"
+        - name: data_dt
+          default: "20240101"
+        - name: is_dryrun
+          default: "false"

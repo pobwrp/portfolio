@@ -1,0 +1,41 @@
+resources:
+  jobs:
+    bronze_payment_stream:
+      name: ${var.job_prefix}BRONZE_PAYMENT_STREAM
+      description: "Structured streaming ingestion from Kafka into Delta bronze tables"
+
+      email_notifications:
+        on_failure:
+          - ${var.email_notifications}
+
+      tasks:
+        - task_key: stream_payments
+          notebook_task:
+            notebook_path: ../src/python/bronze_payment_stream.py
+            base_parameters:
+              starting_offsets: earliest
+            source: WORKSPACE
+          job_cluster_key: single_node_stream
+
+      job_clusters:
+        - job_cluster_key: single_node_stream
+          new_cluster:
+            spark_version: 15.4.x-scala2.12
+            node_type_id: ${var.node_type_id}
+            num_workers: 0
+            spark_conf:
+              spark.databricks.cluster.profile: singleNode
+              spark.master: local[*, 4]
+            custom_tags:
+              ResourceClass: SingleNode
+              project: etl-ingest-common
+            runtime_engine: STANDARD
+
+      tags:
+        project: etl-ingest-common
+        pipeline: payments-intraday
+
+      max_concurrent_runs: 1
+      parameters:
+        - name: env
+          default: "${bundle.target}"

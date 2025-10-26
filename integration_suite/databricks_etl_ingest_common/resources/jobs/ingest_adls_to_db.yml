@@ -1,0 +1,50 @@
+resources:
+  jobs:
+    ingest_adls_to_db:
+      name: ${var.job_prefix}INGEST_ADLS_TO_DB
+      description: "Read curated data from ADLS and persist into the analytics warehouse"
+
+      email_notifications:
+        on_failure:
+          - ${var.email_notifications}
+
+      tasks:
+        - task_key: ingest_adls
+          notebook_task:
+            notebook_path: ../src/python/ingest_adls_to_db.py
+            base_parameters:
+              source_connection_name: blob.raw
+              sql_file_path: ../sql/extract-dataset.sql
+              target_connection_name: warehouse.analytics
+              target_schema_name: mart
+              target_table_name: customer_snapshot
+              pre_ins_sql_file_path: ../sql/prep-dataset.sql
+              write_mode: overwrite
+            source: WORKSPACE
+          job_cluster_key: single_node_adls
+
+      job_clusters:
+        - job_cluster_key: single_node_adls
+          new_cluster:
+            spark_version: 15.4.x-scala2.12
+            node_type_id: ${var.node_type_id}
+            num_workers: 0
+            spark_conf:
+              spark.databricks.cluster.profile: singleNode
+              spark.master: local[*, 4]
+            custom_tags:
+              ResourceClass: SingleNode
+              project: etl-ingest-common
+            runtime_engine: STANDARD
+
+      tags:
+        project: etl-ingest-common
+
+      max_concurrent_runs: 1
+      parameters:
+        - name: env
+          default: "${bundle.target}"
+        - name: data_dt
+          default: "20240101"
+        - name: is_dryrun
+          default: "false"
